@@ -1,0 +1,28 @@
+# Solo para pruebas locales desde la raíz del repo:
+#   cp .env.example .env && mkdir -p data && docker compose -f docker-compose.local.yml up --build
+# Publica el puerto 3000 (en el servidor no se publica: entra por Nginx).
+services:
+  control-autoelevadores:
+    build:
+      context: .
+    container_name: sicalab-control-autoelevadores-1
+    restart: unless-stopped
+    env_file: ./.env
+    environment:
+      # En local la app se abre en localhost: redirecciones de login y URL de los QR.
+      NEXTAUTH_URL: http://localhost:${LOCAL_PORT:-3000}
+      # Valores SOLO para probar en local con el .env recién copiado (vacíos).
+      # Si el .env los define, se usan los del .env. Nunca usar estos en el servidor.
+      AUTH_SECRET: ${AUTH_SECRET:-solo-local-no-usar-en-produccion-0123456789}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin12345}
+    volumes:
+      - ./data:/app/data
+    ports:
+      # LOCAL_PORT permite usar otro puerto del host si el 3000 está ocupado.
+      - "${LOCAL_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "3000"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s

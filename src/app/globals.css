@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-hormigon text-asfalto antialiased;
+  }
+  :focus-visible {
+    outline: 3px solid #1d4ed8;
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* Cinta de peligro: marca los ítems críticos (*) del F-068. */
+  .cinta-peligro {
+    background-image: repeating-linear-gradient(-45deg, #f2b705 0 10px, #23272c 10px 20px);
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primario {
+    @apply btn bg-asfalto text-white hover:bg-asfalto-700;
+  }
+  .btn-secundario {
+    @apply btn border border-asfalto-300 bg-white text-asfalto hover:bg-hormigon-claro;
+  }
+  .btn-peligro {
+    @apply btn bg-rojo text-white hover:brightness-110;
+  }
+  .campo {
+    @apply w-full rounded-md border border-asfalto-300 bg-white px-3 py-2 text-asfalto focus:border-asfalto focus:outline-none;
+  }
+  .etiqueta {
+    @apply mb-1 block text-sm font-semibold text-asfalto-700;
+  }
+  .tabla th {
+    @apply border-b-2 border-asfalto px-3 py-2 text-left text-sm font-semibold;
+  }
+  .tabla td {
+    @apply border-b border-hormigon px-3 py-2 align-top text-sm;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  .no-imprimir {
+    display: none !important;
+  }
+  body {
+    background: white;
+  }
+}

@@ -1,0 +1,21 @@
+# Las dependencias se instalan dentro de la imagen (Linux/musl), nunca las del host.
+node_modules
+.next
+out
+coverage
+*.tsbuildinfo
+
+.git
+.gitignore
+.claude
+
+# Secretos y datos: nunca entran al contexto de build.
+.env
+.env.*
+data
+
+docs
+*.md
+.dockerignore
+docker-compose*.yml
+npm-debug.log*

@@ -1,0 +1,24 @@
+# Bloque estándar SicaLab. Este archivo se integra al docker-compose del servidor
+# (directorio sicalab), donde el repo vive en ./control-autoelevadores/app.
+# Sin `ports`: Nginx llega al contenedor por la red sicalab_default.
+services:
+  control-autoelevadores:
+    build:
+      context: ./control-autoelevadores/app
+    container_name: sicalab-control-autoelevadores-1
+    restart: unless-stopped
+    env_file: ./control-autoelevadores/.env
+    volumes:
+      - ./control-autoelevadores/data:/app/data
+    networks:
+      - sicalab_default
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "3000"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+networks:
+  sicalab_default:
+    external: true
