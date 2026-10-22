@@ -3,28 +3,30 @@
 import { useEffect, useRef } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import type { EstadoFalla } from "@/lib/db/schema";
+import Button, { type Variante } from "@/components/Button";
+import type { NombreIcono } from "@/components/Icono";
+import { Aviso } from "@/components/Estado";
 import { guardarFalla } from "../acciones";
-import { Aviso } from "../../ui";
 
-const SIGUIENTE: Record<EstadoFalla, { estado: EstadoFalla; etiqueta: string }[]> = {
+const SIGUIENTE: Record<EstadoFalla, { estado: EstadoFalla; etiqueta: string; variante: Variante; icono: NombreIcono }[]> = {
   abierta: [
-    { estado: "en_reparacion", etiqueta: "Pasar a En reparación" },
-    { estado: "resuelta", etiqueta: "Marcar Resuelta" },
+    { estado: "en_reparacion", etiqueta: "Pasar a En reparación", variante: "primario", icono: "llave" },
+    { estado: "resuelta", etiqueta: "Marcar Resuelta", variante: "exito", icono: "check" },
   ],
   en_reparacion: [
-    { estado: "resuelta", etiqueta: "Marcar Resuelta" },
-    { estado: "abierta", etiqueta: "Volver a Abierta" },
+    { estado: "resuelta", etiqueta: "Marcar Resuelta", variante: "exito", icono: "check" },
+    { estado: "abierta", etiqueta: "Volver a Abierta", variante: "secundario", icono: "volver" },
   ],
-  resuelta: [{ estado: "en_reparacion", etiqueta: "Reabrir (En reparación)" }],
+  resuelta: [{ estado: "en_reparacion", etiqueta: "Reabrir (En reparación)", variante: "secundario", icono: "llave" }],
   conformidad: [],
 };
 
-function Enviar({ name, value, children, primario }: { name?: string; value?: string; children: React.ReactNode; primario?: boolean }) {
+function Enviar(props: { name?: string; value?: string; variante: Variante; icono?: NombreIcono; children: React.ReactNode }) {
   const { pending } = useFormStatus();
   return (
-    <button name={name} value={value} disabled={pending} className={`${primario ? "btn-primario" : "btn-secundario"} w-full`}>
-      {children}
-    </button>
+    <Button name={props.name} value={props.value} variante={props.variante} icono={props.icono} ancho disabled={pending}>
+      {props.children}
+    </Button>
   );
 }
 
@@ -48,26 +50,22 @@ export default function FormFalla(props: {
 
   if (props.estado === "conformidad") {
     return (
-      <div className="rounded-lg bg-white p-5">
-        <h2 className="font-cartel text-2xl font-bold">Falla cerrada</h2>
-        <p className="text-asfalto-500">El operario dio su conformidad. No admite más cambios.</p>
+      <div className="rounded-lg border border-linea bg-superficie p-5 shadow-tarjeta">
+        <h2 className="text-lg font-semibold text-sica-navy">Falla cerrada</h2>
+        <p className="text-tinta-2">El operario dio su conformidad. No admite más cambios.</p>
       </div>
     );
   }
 
   return (
-    <form ref={ref} action={accion} className="sticky top-4 space-y-4 rounded-lg bg-white p-5">
+    <form ref={ref} action={accion} className="sticky top-4 space-y-4 rounded-lg border border-linea bg-superficie p-5 shadow-tarjeta">
       <input type="hidden" name="id" value={props.id} />
-      <h2 className="font-cartel text-2xl font-bold">Gestión</h2>
+      <h2 className="text-lg font-semibold text-sica-navy">Gestión</h2>
       {props.critica && props.estado !== "resuelta" && (
-        <p className="rounded bg-rojo-claro px-3 py-2 text-sm font-semibold text-rojo">
-          Ítem crítico: el equipo sigue fuera de servicio hasta marcar la falla como Resuelta.
-        </p>
+        <Aviso tipo="error">Ítem crítico: el equipo sigue fuera de servicio hasta marcar la falla como Resuelta.</Aviso>
       )}
       {props.estado === "resuelta" && (
-        <p className="rounded bg-verde-claro px-3 py-2 text-sm font-semibold text-verde">
-          Resuelta. Falta la conformidad del autoelevadorista, que la da desde el QR del equipo.
-        </p>
+        <Aviso>Resuelta. Falta la conformidad del autoelevadorista, que la da desde el QR del equipo.</Aviso>
       )}
       <div>
         <label className="etiqueta" htmlFor="responsable">
@@ -91,14 +89,23 @@ export default function FormFalla(props: {
         <label className="etiqueta" htmlFor="foto">
           Foto (opcional)
         </label>
-        <input id="foto" name="foto" type="file" accept="image/jpeg,image/png,image/webp" className="text-sm" />
+        <input
+          id="foto"
+          name="foto"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="block w-full text-sm file:mr-3 file:min-h-[40px] file:rounded file:border file:border-sica-navy file:bg-superficie file:px-3 file:font-semibold file:text-sica-navy"
+        />
       </div>
       {res?.error && <Aviso tipo="error">{res.error}</Aviso>}
       {res?.ok && <Aviso>{res.ok}</Aviso>}
-      <div className="space-y-2">
-        <Enviar>Guardar datos y comentario</Enviar>
-        {SIGUIENTE[props.estado].map((s, i) => (
-          <Enviar key={s.estado} name="estado" value={s.estado} primario={i === 0}>
+      {/* "Guardar" va primero en el DOM: es el botón que usa Enter (nunca un cambio de estado). */}
+      <div className="flex flex-col gap-2 border-t border-linea pt-4">
+        <div className="order-last">
+          <Enviar variante="secundario">Guardar datos y comentario</Enviar>
+        </div>
+        {SIGUIENTE[props.estado].map((s) => (
+          <Enviar key={s.estado} name="estado" value={s.estado} variante={s.variante} icono={s.icono}>
             {s.etiqueta}
           </Enviar>
         ))}

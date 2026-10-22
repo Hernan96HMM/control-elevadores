@@ -1,22 +1,45 @@
 import type { Config } from "tailwindcss";
 
-// Paleta de señalética de planta (ISO 7010 / IRAM 10005).
+// Tokens de diseño SICA. Los valores viven como CSS variables (canales RGB) en
+// src/app/globals.css: única fuente de verdad. Acá solo se exponen a Tailwind.
+const v = (nombre: string) => `rgb(var(--${nombre}) / <alpha-value>)`;
+
 const config: Config = {
   content: ["./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        amarillo: { DEFAULT: "#F2B705", oscuro: "#C99500", claro: "#FFF4C2" },
-        verde: { DEFAULT: "#0B7A3E", claro: "#DDF2E5" },
-        rojo: { DEFAULT: "#C8102E", claro: "#FBE3E6" },
-        asfalto: { DEFAULT: "#23272C", 700: "#353A41", 500: "#5B626B", 300: "#9AA1A9" },
-        hormigon: { DEFAULT: "#E7E9EC", claro: "#F4F5F7" },
-        naranja: { DEFAULT: "#D9620B", claro: "#FDEBDD" },
+        sica: {
+          navy: v("sica-navy"),
+          "navy-900": v("sica-navy-900"),
+          "navy-100": v("sica-navy-100"),
+          "navy-50": v("sica-navy-50"),
+          cyan: v("sica-cyan"),
+          "cyan-700": v("sica-cyan-700"),
+          "cyan-50": v("sica-cyan-50"),
+        },
+        tinta: { DEFAULT: v("tinta"), 2: v("tinta-2"), 3: v("tinta-3") },
+        linea: v("linea"),
+        fondo: v("fondo"),
+        superficie: v("superficie"),
+        ok: { DEFAULT: v("ok"), bg: v("ok-bg") },
+        obs: { DEFAULT: v("obs"), bg: v("obs-bg"), acento: v("obs-acento") },
+        fs: { DEFAULT: v("fs"), bg: v("fs-bg") },
+        sin: { DEFAULT: v("sin"), bg: v("sin-bg") },
       },
       fontFamily: {
-        sans: ["Barlow", "system-ui", "sans-serif"],
-        cartel: ['"Barlow Condensed"', "Barlow", "system-ui", "sans-serif"],
+        sans: ['"Titillium Web"', "system-ui", "sans-serif"],
       },
+      borderRadius: {
+        DEFAULT: "8px",
+        lg: "10px",
+        xl: "12px",
+      },
+      boxShadow: {
+        tarjeta: "0 1px 2px rgb(var(--sica-navy) / 0.06), 0 2px 8px rgb(var(--sica-navy) / 0.06)",
+        flotante: "0 -4px 16px rgb(var(--sica-navy) / 0.12)",
+      },
+      minHeight: { toque: "56px" },
     },
   },
   plugins: [],

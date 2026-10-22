@@ -16,8 +16,7 @@
     "db:seed:prod": "node scripts/seed.js"
   },
   "dependencies": {
-    "@fontsource/barlow": "^5.3.0",
-    "@fontsource/barlow-condensed": "^5.3.0",
+    "@fontsource/titillium-web": "^5.3.0",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.11.1",
     "drizzle-orm": "^0.45.4",

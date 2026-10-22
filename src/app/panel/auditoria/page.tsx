@@ -1,7 +1,8 @@
 import { desc } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { fmtFechaHora } from "@/lib/time";
-import { Encabezado } from "../ui";
+import { boton } from "@/components/Button";
+import { Contenido, Encabezado, TablaContenedor } from "../ui";
 
 export const dynamic = "force-dynamic";
 
@@ -19,45 +20,47 @@ export default function PaginaAuditoria({ searchParams }: { searchParams: { p?: 
 
   return (
     <div>
-      <Encabezado titulo="Auditoría" />
-      <div className="px-8 py-6">
-        <table className="tabla w-full rounded-lg bg-white">
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Quién</th>
-              <th>Acción</th>
-              <th>Sobre</th>
-              <th>Detalle</th>
-              <th>IP</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filas.slice(0, tam).map((a) => (
-              <tr key={a.id}>
-                <td className="whitespace-nowrap">{fmtFechaHora(a.creadoEn)}</td>
-                <td>{a.actor}</td>
-                <td className="font-semibold">{a.accion}</td>
-                <td>{a.entidad ? `${a.entidad} #${a.entidadId}` : ""}</td>
-                <td className="max-w-md break-words text-xs text-asfalto-500">{a.detalle}</td>
-                <td className="text-xs">{a.ip}</td>
+      <Encabezado titulo="Auditoría" descripcion="Ingresos, controles, cambios de estado y modificaciones de administración." />
+      <Contenido>
+        <TablaContenedor>
+          <table className="tabla">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Quién</th>
+                <th>Acción</th>
+                <th>Sobre</th>
+                <th>Detalle</th>
+                <th>IP</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-        <div className="mt-4 flex gap-2">
+            </thead>
+            <tbody>
+              {filas.slice(0, tam).map((a) => (
+                <tr key={a.id}>
+                  <td className="whitespace-nowrap tabular-nums">{fmtFechaHora(a.creadoEn)}</td>
+                  <td>{a.actor}</td>
+                  <td className="whitespace-nowrap font-semibold text-sica-navy">{a.accion}</td>
+                  <td className="whitespace-nowrap">{a.entidad ? `${a.entidad} #${a.entidadId}` : ""}</td>
+                  <td className="max-w-md break-words text-xs text-tinta-2">{a.detalle}</td>
+                  <td className="text-xs tabular-nums">{a.ip}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TablaContenedor>
+        <div className="flex gap-2">
           {pagina > 1 && (
-            <a className="btn-secundario" href={`?p=${pagina - 1}`}>
+            <a className={boton({ variante: "secundario" })} href={`?p=${pagina - 1}`}>
               Más recientes
             </a>
           )}
           {hayMas && (
-            <a className="btn-secundario" href={`?p=${pagina + 1}`}>
+            <a className={boton({ variante: "secundario" })} href={`?p=${pagina + 1}`}>
               Anteriores
             </a>
           )}
         </div>
-      </div>
+      </Contenido>
     </div>
   );
 }

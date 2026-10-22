@@ -122,6 +122,22 @@ app detenida o con `sqlite3 ... ".backup"`).
 4. Plastificar y pegar en un lugar visible del equipo. Probarlo con la cámara de un celular conectado al
    wifi de planta: tiene que abrir `http://control-autoelevadores.sica/a/<código>`.
 
+## Identidad visual (Manual de Marca SICA)
+
+- **Tokens** en `src/app/globals.css` (CSS variables) expuestos en `tailwind.config.ts`: `sica-navy #21396E`
+  (dominante), `sica-cyan #2BA5D6` (solo acentos: indicadores, foco, líneas; no apto para texto chico, 2,8:1),
+  más neutros y colores de estado (Operativo / Con observaciones / Fuera de servicio / Sin control hoy) con
+  contraste WCAG AA. Los componentes no usan colores hexadecimales sueltos.
+- **Tipografía:** Titillium Web autoalojada (`@fontsource/titillium-web`, pesos 400/600/700). Sin Google Fonts ni CDN.
+- **Componentes base** en `src/components/`: `BrandLogo`, `Button`, `Estado` (StatusPill, badges), `Card`, `Chevron`, `Icono`.
+- **Logo:** único punto de uso `<BrandLogo variant tone size />`. Los archivos están en `public/brand/`.
+  **Provisorio:** son PNG tomados de otras apps SicaLab (el negativo se obtuvo quitando el fondo liso del logo
+  de pie de `pdf-sica`, sin redibujar). Cuando Marketing entregue los SVG oficiales, copiarlos con los mismos
+  nombres (`sica-logo-positivo.svg`, `sica-logo-negativo.svg`, `sica-logo-sin-tagline-positivo.svg`,
+  `sica-logo-sin-tagline-negativo.svg`, `sica-isotipo.svg`, `sica-isotipo-negativo.svg`) y cambiar `EXT` a
+  `"svg"` en `src/components/BrandLogo.tsx`. Regenerar también `public/icono-*.png`, `apple-touch-icon.png` y `favicon-*.png`.
+- **QR:** siempre negro sobre blanco con zona de silencio de 4 módulos; la marca va alrededor, nunca encima.
+
 ## Notas
 
 - La app es HTTP interna (sin HTTPS). Por eso: el QR se escanea con la cámara nativa (no hay escáner

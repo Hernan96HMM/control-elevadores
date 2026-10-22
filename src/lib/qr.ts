@@ -8,5 +8,6 @@ export function urlEquipo(codigo: string): string {
 }
 
 export async function qrSvg(texto: string): Promise<string> {
-  return QRCode.toString(texto, { type: "svg", errorCorrectionLevel: "M", margin: 1, color: { dark: "#000000", light: "#ffffff" } });
+  // Negro sobre blanco y zona de silencio completa (4 módulos, ISO/IEC 18004): no colorear el QR.
+  return QRCode.toString(texto, { type: "svg", errorCorrectionLevel: "M", margin: 4, color: { dark: "#000000", light: "#ffffff" } });
 }

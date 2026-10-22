@@ -2,48 +2,91 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Tokens de identidad SICA (Manual de Marca). Canales RGB para usar con opacidad en Tailwind.
+ * Contraste WCAG calculado (scripts de verificación en el README):
+ *   navy/blanco 11.2:1 · navy-900/blanco 14.1:1 · cyan/blanco 2.8:1 (solo acentos, nunca texto chico)
+ *   cyan-700/blanco 4.5:1 · tinta-2/blanco 7.2:1 · tinta-2/fondo 6.6:1
+ *   ok/blanco 5.4:1 · obs/obs-bg 5.4:1 · fs/blanco 5.8:1 · sin/blanco 5.8:1
+ */
+:root {
+  --sica-navy: 33 57 110; /* #21396E — color dominante de marca */
+  --sica-navy-900: 23 42 82; /* #172A52 — hover / pressed */
+  --sica-navy-100: 220 227 240; /* #DCE3F0 */
+  --sica-navy-50: 238 242 249; /* #EEF2F9 — fondos de fila / tarjeta */
+  --sica-cyan: 43 165 214; /* #2BA5D6 — acento */
+  --sica-cyan-700: 26 127 168; /* #1A7FA8 — celeste apto para texto */
+  --sica-cyan-50: 232 246 252; /* #E8F6FC */
+
+  --tinta: 27 36 51; /* #1B2433 — texto principal */
+  --tinta-2: 74 88 114; /* #4A5872 — texto secundario */
+  --tinta-3: 122 135 158; /* #7A879E — deshabilitado / decorativo */
+  --linea: 203 211 225; /* #CBD3E1 — bordes */
+  --fondo: 244 246 250; /* #F4F6FA — fondo de página */
+  --superficie: 255 255 255;
+
+  /* Estados (separados de la marca) */
+  --ok: 15 122 61; /* #0F7A3D Operativo */
+  --ok-bg: 227 244 234;
+  --obs: 138 90 0; /* #8A5A00 Con observaciones (texto) */
+  --obs-bg: 255 244 214;
+  --obs-acento: 242 179 61; /* #F2B33D */
+  --fs: 193 39 45; /* #C1272D Fuera de servicio */
+  --fs-bg: 252 232 233;
+  --sin: 91 102 122; /* #5B667A Sin control hoy */
+  --sin-bg: 236 239 244;
+}
+
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
   }
   body {
-    @apply bg-hormigon text-asfalto antialiased;
+    @apply bg-fondo font-sans text-tinta antialiased;
   }
   :focus-visible {
-    outline: 3px solid #1d4ed8;
+    outline: 3px solid rgb(var(--sica-cyan));
     outline-offset: 2px;
+    box-shadow: 0 0 0 5px rgb(var(--sica-navy) / 0.35);
   }
 }
 
 @layer components {
-  /* Cinta de peligro: marca los ítems críticos (*) del F-068. */
-  .cinta-peligro {
-    background-image: repeating-linear-gradient(-45deg, #f2b705 0 10px, #23272c 10px 20px);
-  }
-  .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
-  }
-  .btn-primario {
-    @apply btn bg-asfalto text-white hover:bg-asfalto-700;
-  }
-  .btn-secundario {
-    @apply btn border border-asfalto-300 bg-white text-asfalto hover:bg-hormigon-claro;
-  }
-  .btn-peligro {
-    @apply btn bg-rojo text-white hover:brightness-110;
-  }
-  .campo {
-    @apply w-full rounded-md border border-asfalto-300 bg-white px-3 py-2 text-asfalto focus:border-asfalto focus:outline-none;
-  }
-  .etiqueta {
-    @apply mb-1 block text-sm font-semibold text-asfalto-700;
+  .tabla {
+    @apply w-full border-collapse bg-superficie text-sm;
   }
   .tabla th {
-    @apply border-b-2 border-asfalto px-3 py-2 text-left text-sm font-semibold;
+    @apply border-b-2 border-sica-navy px-3 py-2.5 text-left font-semibold text-sica-navy;
   }
   .tabla td {
-    @apply border-b border-hormigon px-3 py-2 align-top text-sm;
+    @apply border-b border-linea px-3 py-2.5 align-top;
   }
+  .tabla tbody tr:hover {
+    @apply bg-sica-navy-50;
+  }
+  .campo {
+    @apply min-h-[44px] w-full rounded border border-linea bg-superficie px-3 py-2 text-tinta placeholder:text-tinta-3 focus:border-sica-navy focus:outline-none;
+  }
+  .etiqueta {
+    @apply mb-1 block text-sm font-semibold text-tinta-2;
+  }
+  /* Motivo de marca: diagonal suave gris muy claro (solo fondos de login / vacíos). */
+  .diagonal-suave {
+    background-image: linear-gradient(115deg, transparent 0 62%, rgb(var(--sica-navy) / 0.04) 62% 100%);
+  }
+}
+
+@keyframes destello {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.82;
+  }
+}
+.animar-alerta {
+  animation: destello 1.2s ease-in-out 3;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -51,7 +94,9 @@
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 

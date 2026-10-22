@@ -3,7 +3,7 @@ import { getDb, schema } from "@/lib/db";
 import { requerirUsuario } from "@/lib/sesion";
 import { Encabezado } from "../../ui";
 import FormAdmin from "../FormAdmin";
-import { Campo, Check } from "../campos";
+import { Campo, Check, FilaAbm, AltaAbm } from "../campos";
 import { guardarUsuario } from "../acciones";
 
 export const dynamic = "force-dynamic";
@@ -26,9 +26,8 @@ export default async function PaginaUsuarios() {
   return (
     <div>
       <Encabezado titulo="Usuarios" />
-      <div className="space-y-6 px-8 py-6">
-        <section className="rounded-lg bg-white p-5">
-          <h2 className="mb-3 font-cartel text-xl font-bold">Agregar usuario</h2>
+      <div className="space-y-6 px-6 py-5 lg:px-8">
+        <AltaAbm titulo="Agregar usuario">
           <FormAdmin accion={guardarUsuario} boton="Agregar" limpiar>
             <Campo etiqueta="Usuario" name="usuario" required autoComplete="off" className="w-40" />
             <Campo etiqueta="Nombre" name="nombre" required className="w-56" />
@@ -36,10 +35,10 @@ export default async function PaginaUsuarios() {
             <Campo etiqueta="Contraseña inicial" name="password" type="password" minLength={8} required autoComplete="new-password" className="w-48" />
             <Check etiqueta="Activo" name="activo" defaultChecked />
           </FormAdmin>
-        </section>
+        </AltaAbm>
         <section className="space-y-3">
           {us.map((u) => (
-            <div key={u.id} className={`rounded-lg bg-white p-4 ${u.activo ? "" : "opacity-60"}`}>
+            <FilaAbm key={u.id} inactivo={!u.activo}>
               <FormAdmin accion={guardarUsuario}>
                 <input type="hidden" name="id" value={u.id} />
                 <Campo etiqueta="Usuario" name="usuario" defaultValue={u.usuario} required className="w-40" />
@@ -56,7 +55,7 @@ export default async function PaginaUsuarios() {
                 />
                 <Check etiqueta="Activo" name="activo" defaultChecked={u.activo} />
               </FormAdmin>
-            </div>
+            </FilaAbm>
           ))}
         </section>
       </div>

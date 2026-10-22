@@ -1,49 +1,23 @@
-import type { EstadoEquipo } from "@/lib/estado";
-import { ETIQUETA_ESTADO, ETIQUETA_FALLA } from "@/lib/estado";
-import type { EstadoFalla } from "@/lib/db/schema";
+// Piezas de página del panel. Los estados/badges viven en @/components/Estado.
+export { BadgeFalla as ChipFalla, BadgeCritico as Critico, Aviso, StatusPill as ChipEstado } from "@/components/Estado";
 
-export function Encabezado({ titulo, children }: { titulo: string; children?: React.ReactNode }) {
+export function Encabezado({ titulo, descripcion, children }: { titulo: string; descripcion?: string; children?: React.ReactNode }) {
   return (
-    <header className="no-imprimir flex flex-wrap items-end justify-between gap-4 border-b border-hormigon bg-white px-8 py-5">
-      <h1 className="font-cartel text-3xl font-bold">{titulo}</h1>
+    <header className="no-imprimir flex flex-wrap items-end justify-between gap-4 px-6 pb-2 pt-6 lg:px-8">
+      <div>
+        <h1 className="text-[1.75rem] font-bold leading-tight text-sica-navy">{titulo}</h1>
+        {descripcion && <p className="mt-0.5 max-w-3xl text-tinta-2">{descripcion}</p>}
+      </div>
       {children && <div className="flex flex-wrap items-center gap-2">{children}</div>}
     </header>
   );
 }
 
-const COLOR_ESTADO: Record<EstadoEquipo, string> = {
-  operativo: "bg-verde text-white",
-  observaciones: "bg-amarillo text-asfalto",
-  fuera_servicio: "bg-rojo text-white",
-  sin_control: "bg-asfalto-500 text-white",
-};
-
-export function ChipEstado({ estado }: { estado: EstadoEquipo }) {
-  return <span className={`rounded px-2 py-0.5 text-sm font-semibold ${COLOR_ESTADO[estado]}`}>{ETIQUETA_ESTADO[estado]}</span>;
+export function Contenido({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <div className={`space-y-6 px-6 py-5 lg:px-8 ${className}`}>{children}</div>;
 }
 
-const COLOR_FALLA: Record<EstadoFalla, string> = {
-  abierta: "bg-rojo-claro text-rojo",
-  en_reparacion: "bg-naranja-claro text-naranja",
-  resuelta: "bg-verde-claro text-verde",
-  conformidad: "bg-hormigon text-asfalto-700",
-};
-
-export function ChipFalla({ estado }: { estado: EstadoFalla }) {
-  return <span className={`rounded px-2 py-0.5 text-sm font-semibold ${COLOR_FALLA[estado]}`}>{ETIQUETA_FALLA[estado]}</span>;
-}
-
-export function Critico() {
-  return <span className="ml-1 rounded bg-asfalto px-1.5 py-0.5 text-xs font-semibold text-amarillo">Crítico *</span>;
-}
-
-export function Aviso({ tipo = "ok", children }: { tipo?: "ok" | "error"; children: React.ReactNode }) {
-  return (
-    <p
-      role={tipo === "error" ? "alert" : "status"}
-      className={`rounded px-3 py-2 text-sm font-semibold ${tipo === "error" ? "bg-rojo-claro text-rojo" : "bg-verde-claro text-verde"}`}
-    >
-      {children}
-    </p>
-  );
+/** Contenedor de tabla con scroll horizontal propio (la página nunca scrollea en X). */
+export function TablaContenedor({ children }: { children: React.ReactNode }) {
+  return <div className="overflow-x-auto rounded-lg border border-linea bg-superficie shadow-tarjeta">{children}</div>;
 }

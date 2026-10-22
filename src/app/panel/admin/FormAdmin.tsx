@@ -2,14 +2,16 @@
 
 import { useEffect, useRef } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import Button from "@/components/Button";
+import { Aviso } from "@/components/Estado";
 import type { EstadoForm } from "./acciones";
 
 function Guardar({ texto }: { texto: string }) {
   const { pending } = useFormStatus();
   return (
-    <button className="btn-primario whitespace-nowrap" disabled={pending}>
+    <Button cargando={pending} className="whitespace-nowrap">
       {pending ? "Guardando…" : texto}
-    </button>
+    </Button>
   );
 }
 
@@ -38,15 +40,10 @@ export default function FormAdmin({
         {children}
         <Guardar texto={boton} />
       </div>
-      {res?.error && (
-        <p role="alert" className="mt-2 text-sm font-semibold text-rojo">
-          {res.error}
-        </p>
-      )}
-      {res?.ok && (
-        <p role="status" className="mt-2 text-sm font-semibold text-verde">
-          {res.ok}
-        </p>
+      {(res?.error || res?.ok) && (
+        <div className="mt-3 max-w-xl">
+          {res.error ? <Aviso tipo="error">{res.error}</Aviso> : <Aviso>{res.ok}</Aviso>}
+        </div>
       )}
     </form>
   );

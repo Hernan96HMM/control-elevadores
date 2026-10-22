@@ -1,9 +1,11 @@
 "use client";
 
+import Button from "@/components/Button";
+
 export default function BotonImprimir({ texto = "Imprimir" }: { texto?: string }) {
   return (
-    <button type="button" className="btn-secundario" onClick={() => window.print()}>
+    <Button type="button" variante="secundario" icono="imprimir" onClick={() => window.print()}>
       {texto}
-    </button>
+    </Button>
   );
 }

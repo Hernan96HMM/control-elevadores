@@ -1,14 +1,16 @@
 "use client";
 
 import { useFormState, useFormStatus } from "react-dom";
+import Button from "@/components/Button";
+import { Aviso } from "@/components/Estado";
 import { ingresar } from "./acciones";
 
 function Boton() {
   const { pending } = useFormStatus();
   return (
-    <button className="btn-primario w-full py-3 text-lg" disabled={pending}>
+    <Button tamano="lg" ancho cargando={pending}>
       {pending ? "Ingresando…" : "Ingresar"}
-    </button>
+    </Button>
   );
 }
 
@@ -28,11 +30,7 @@ export default function FormLogin() {
         </label>
         <input id="password" name="password" type="password" className="campo" autoComplete="current-password" required />
       </div>
-      {estado?.error && (
-        <p role="alert" className="rounded bg-rojo-claro px-3 py-2 text-sm font-semibold text-rojo">
-          {estado.error}
-        </p>
-      )}
+      {estado?.error && <Aviso tipo="error">{estado.error}</Aviso>}
       <Boton />
     </form>
   );

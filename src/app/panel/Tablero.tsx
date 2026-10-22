@@ -3,9 +3,12 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { TarjetaEquipo } from "@/lib/servicios/equipos";
-import { ETIQUETA_ESTADO, type EstadoEquipo } from "@/lib/estado";
 import type { EstadoFalla } from "@/lib/db/schema";
-import { ChipFalla, Critico } from "./ui";
+import Button from "@/components/Button";
+import Icono from "@/components/Icono";
+import { BadgeCritico, BadgeFalla, ESTILO_EQUIPO, StatusPill } from "@/components/Estado";
+import { useEventos } from "./Eventos";
+import { TablaContenedor } from "./ui";
 
 type Datos = {
   equipos: TarjetaEquipo[];
@@ -32,35 +35,23 @@ const fechaHora = (iso: string) =>
     minute: "2-digit",
   }).format(new Date(iso));
 
-const PLACA: Record<EstadoEquipo, string> = {
-  operativo: "border-verde",
-  observaciones: "border-amarillo",
-  fuera_servicio: "border-rojo",
-  sin_control: "border-asfalto-300",
-};
-const BANDA: Record<EstadoEquipo, string> = {
-  operativo: "bg-verde text-white",
-  observaciones: "bg-amarillo text-asfalto",
-  fuera_servicio: "bg-rojo text-white",
-  sin_control: "bg-asfalto-500 text-white",
-};
-const RESULTADO: Record<string, { txt: string; cls: string }> = {
-  ok: { txt: "En orden", cls: "text-verde" },
-  observaciones: { txt: "Con observaciones", cls: "text-naranja" },
-  fuera_servicio: { txt: "Fuera de servicio", cls: "text-rojo" },
-};
+const RESULTADO = {
+  ok: { estado: "operativo", txt: "En orden" },
+  observaciones: { estado: "observaciones", txt: "Con observaciones" },
+  fuera_servicio: { estado: "fuera_servicio", txt: "Fuera de servicio" },
+} as const;
 
 function pitido(ctx: AudioContext, critica: boolean) {
-  // Patrón de sirena corta: dos tonos (crítica) o uno (no crítica).
-  const tonos = critica ? [880, 660, 880, 660] : [740, 740];
+  // Diferenciado: falla crítica = sirena de dos tonos repetida; no crítica = dos pitidos suaves.
+  const tonos = critica ? [880, 620, 880, 620, 880, 620] : [740, 740];
   tonos.forEach((f, i) => {
     const o = ctx.createOscillator();
     const g = ctx.createGain();
-    o.type = "square";
+    o.type = critica ? "square" : "sine";
     o.frequency.value = f;
     const t = ctx.currentTime + i * 0.22;
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(critica ? 0.25 : 0.18, t + 0.02);
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
     o.connect(g).connect(ctx.destination);
     o.start(t);
@@ -70,14 +61,11 @@ function pitido(ctx: AudioContext, critica: boolean) {
 
 export default function Tablero({ inicial }: { inicial: Datos }) {
   const [d, setD] = useState<Datos>(inicial);
-  const [conectado, setConectado] = useState<boolean | null>(null);
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [sinVer, setSinVer] = useState(0);
   const [sonido, setSonido] = useState(false);
   const [nuevos, setNuevos] = useState<Set<number>>(new Set());
   const audio = useRef<AudioContext | null>(null);
-  const sonidoRef = useRef(false);
-  sonidoRef.current = sonido;
 
   const recargar = useCallback(async () => {
     try {
@@ -89,15 +77,10 @@ export default function Tablero({ inicial }: { inicial: Datos }) {
     }
   }, []);
 
-  useEffect(() => {
-    const es = new EventSource("/api/stream");
-    es.addEventListener("hola", () => {
-      setConectado(true);
-      void recargar(); // al reconectar, ponerse al día con lo que pasó mientras tanto
-    });
-    es.onerror = () => setConectado(false);
-    es.addEventListener("control", (e) => {
-      const ev = JSON.parse((e as MessageEvent).data);
+  useEventos((tipo, datos) => {
+    if (tipo === "hola") return void recargar(); // al (re)conectar, ponerse al día
+    if (tipo === "control") {
+      const ev = datos as { controlId: number; equipo: string; operario: string; fallasNuevas: number; criticas: number };
       setNuevos((s) => new Set(s).add(ev.controlId));
       if (ev.fallasNuevas > 0 || ev.criticas > 0) {
         const critica = ev.criticas > 0;
@@ -114,14 +97,11 @@ export default function Tablero({ inicial }: { inicial: Datos }) {
           ].slice(0, 5),
         );
         setSinVer((n) => n + 1);
-        if (sonidoRef.current && audio.current) pitido(audio.current, critica);
+        if (sonido && audio.current) pitido(audio.current, critica);
       }
-      void recargar();
-    });
-    es.addEventListener("falla", () => void recargar());
-    es.addEventListener("equipos", () => void recargar());
-    return () => es.close();
-  }, [recargar]);
+    }
+    void recargar();
+  });
 
   useEffect(() => {
     document.title = sinVer > 0 ? `(${sinVer}) ⚠ ${TITULO}` : TITULO;
@@ -146,152 +126,195 @@ export default function Tablero({ inicial }: { inicial: Datos }) {
   };
 
   const sinControl = d.equipos.filter((e) => !e.controlHoy).length;
+  const fueraServicio = d.equipos.filter((e) => e.estado === "fuera_servicio").length;
+  const hayCritica = alertas.some((a) => a.critica);
 
   return (
     <div>
-      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-hormigon bg-white px-8 py-5">
-        <div>
-          <h1 className="font-cartel text-3xl font-bold">Tablero en vivo</h1>
-          <p className="text-sm text-asfalto-500">
-            <span
-              className={`mr-1.5 inline-block h-2.5 w-2.5 rounded-full ${conectado ? "bg-verde" : conectado === false ? "bg-rojo" : "bg-asfalto-300"}`}
-              aria-hidden
-            />
-            {conectado ? "Conectado: los controles aparecen al instante" : conectado === false ? "Sin conexión, reintentando…" : "Conectando…"}
-          </p>
-        </div>
-        <div className="flex items-center gap-6">
-          <Link href="/panel/fallas" className="text-right">
-            <span className="block font-cartel text-4xl font-bold leading-none text-rojo">{d.fallas.total}</span>
-            <span className="text-sm text-asfalto-500">
-              {d.fallas.total === 1 ? "falla abierta" : "fallas abiertas"}
-              {d.fallas.criticas > 0 ? `, ${d.fallas.criticas} ${d.fallas.criticas === 1 ? "crítica" : "críticas"}` : ""}
-            </span>
-          </Link>
-          <div className="text-right">
-            <span className="block font-cartel text-4xl font-bold leading-none">{sinControl}</span>
-            <span className="text-sm text-asfalto-500">sin control hoy</span>
-          </div>
-          <button className={sonido ? "btn-secundario" : "btn-primario"} onClick={() => void activarSonido()} aria-pressed={sonido}>
-            {sonido ? "🔔 Sonido activo" : "🔕 Activar sonido"}
-          </button>
-        </div>
+      <header className="flex flex-wrap items-end justify-between gap-4 px-6 pb-2 pt-6 lg:px-8">
+        <h1 className="text-[1.75rem] font-bold leading-tight text-sica-navy">Tablero en vivo</h1>
+        <Button variante={sonido ? "secundario" : "primario"} icono={sonido ? "campana" : "campanaOff"} onClick={() => void activarSonido()} aria-pressed={sonido}>
+          {sonido ? "Sonido activo" : "Activar sonido"}
+        </Button>
       </header>
 
       {alertas.length > 0 && (
         <section
           role="alert"
-          className={`flex items-start justify-between gap-4 px-8 py-4 ${alertas.some((a) => a.critica) ? "animate-pulse bg-rojo text-white" : "bg-amarillo text-asfalto"}`}
+          className={`mx-6 mt-3 flex items-start gap-4 rounded-lg px-5 py-4 lg:mx-8 ${
+            hayCritica ? "animar-alerta bg-fs text-white" : "border border-obs-acento bg-obs-bg text-obs"
+          }`}
         >
-          <ul className="space-y-1 text-lg font-semibold">
+          <Icono nombre={hayCritica ? "prohibido" : "alerta"} className="h-8 w-8" />
+          <ul className="flex-1 space-y-1 text-lg font-semibold">
             {alertas.map((a) => (
-              <li key={a.id}>⚠ {a.texto}</li>
+              <li key={a.id}>{a.texto}</li>
             ))}
           </ul>
-          <button className="btn shrink-0 bg-white text-asfalto" onClick={vistas}>
+          <Button variante="claro" onClick={vistas}>
             Visto
-          </button>
+          </Button>
         </section>
       )}
 
-      <div className="grid gap-8 px-8 py-6 xl:grid-cols-[1fr,360px]">
-        <div className="space-y-8">
+      <div className="grid gap-6 px-6 py-5 lg:px-8 2xl:grid-cols-[1fr,380px]">
+        <div className="min-w-0 space-y-6">
+          {/* Indicadores */}
+          <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <Indicador valor={d.fallas.total} etiqueta={d.fallas.total === 1 ? "falla abierta" : "fallas abiertas"} href="/panel/fallas" alerta={d.fallas.total > 0} />
+            <Indicador valor={d.fallas.criticas} etiqueta={d.fallas.criticas === 1 ? "crítica" : "críticas"} href="/panel/fallas" alerta={d.fallas.criticas > 0} />
+            <Indicador valor={fueraServicio} etiqueta="fuera de servicio" alerta={fueraServicio > 0} />
+            <Indicador valor={sinControl} etiqueta="sin control hoy" />
+          </dl>
+
           <section aria-label="Equipos">
-            <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
-              {d.equipos.map((e) => (
-                <article key={e.id} className={`overflow-hidden rounded-lg border-4 bg-white ${PLACA[e.estado]}`}>
-                  <div className={`px-4 py-2 font-cartel text-xl font-bold ${BANDA[e.estado]}`}>
-                    {e.estado === "fuera_servicio" ? "NO USAR · Fuera de servicio" : ETIQUETA_ESTADO[e.estado]}
-                  </div>
-                  <div className="p-4">
-                    <h2 className="font-cartel text-2xl font-bold leading-tight">{e.nombre}</h2>
-                    <p className="mb-3 text-sm text-asfalto-500">{e.codigo}</p>
-                    {e.controlHoy ? (
-                      <p>
-                        Control {hora(e.controlHoy.firmadoEn)} · {e.controlHoy.operario}
-                        <span className="block text-sm text-asfalto-500">{e.controlHoy.horas} h de horómetro</span>
-                      </p>
-                    ) : (
-                      <p className="font-semibold text-asfalto-500">Todavía sin control hoy</p>
-                    )}
-                    {e.fallasPendientes > 0 && (
-                      <Link href={`/panel/fallas?equipo=${e.id}`} className="mt-2 block font-semibold text-rojo underline">
-                        {e.fallasPendientes} falla(s) sin resolver{e.criticasPendientes ? ` (${e.criticasPendientes} crítica)` : ""}
-                      </Link>
-                    )}
-                  </div>
-                </article>
-              ))}
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {d.equipos.map((e) => {
+                const est = ESTILO_EQUIPO[e.estado];
+                return (
+                  <article
+                    key={e.id}
+                    className={`flex flex-col rounded-lg border border-linea border-t-4 bg-superficie shadow-tarjeta ${est.borde}`}
+                  >
+                    <div className="px-4 pt-4">
+                      <h2 className="text-xl font-bold leading-tight text-sica-navy">{e.nombre}</h2>
+                      <p className="text-sm text-tinta-2">{e.codigo}</p>
+                    </div>
+                    <div className="px-4 pt-3">
+                      {e.estado === "fuera_servicio" ? (
+                        <span className="inline-flex items-center gap-1.5 rounded bg-fs px-2.5 py-1 font-bold text-white">
+                          <Icono nombre="prohibido" className="h-5 w-5" /> NO USAR · Fuera de servicio
+                        </span>
+                      ) : (
+                        <StatusPill estado={e.estado} grande />
+                      )}
+                    </div>
+                    <dl className="mt-3 grid flex-1 grid-cols-[auto,1fr] gap-x-3 gap-y-1 border-t border-linea px-4 py-3 text-sm">
+                      <dt className="text-tinta-2">Último control</dt>
+                      <dd className="font-semibold">{e.controlHoy ? `Hoy ${hora(e.controlHoy.firmadoEn)}` : "Sin control hoy"}</dd>
+                      <dt className="text-tinta-2">Operario</dt>
+                      <dd className="font-semibold">{e.controlHoy?.operario ?? "—"}</dd>
+                      <dt className="text-tinta-2">Horómetro</dt>
+                      <dd className="font-semibold tabular-nums">{e.controlHoy ? `${e.controlHoy.horas} h` : "—"}</dd>
+                      <dt className="text-tinta-2">Fallas abiertas</dt>
+                      <dd>
+                        {e.fallasPendientes > 0 ? (
+                          <Link href={`/panel/fallas?equipo=${e.id}`} className="font-semibold text-fs underline">
+                            {e.fallasPendientes}
+                            {e.criticasPendientes ? ` (${e.criticasPendientes} crítica)` : ""}
+                          </Link>
+                        ) : (
+                          <span className="font-semibold">0</span>
+                        )}
+                      </dd>
+                    </dl>
+                  </article>
+                );
+              })}
               {d.equipos.length === 0 && (
-                <p className="text-asfalto-500">
-                  No hay equipos activos. <Link href="/panel/admin/equipos" className="underline">Cargá los equipos</Link>.
+                <p className="rounded-lg border border-dashed border-linea bg-superficie p-6 text-tinta-2">
+                  No hay equipos activos.{" "}
+                  <Link href="/panel/admin/equipos" className="font-semibold text-sica-navy underline">
+                    Cargá los equipos
+                  </Link>
+                  .
                 </p>
               )}
             </div>
           </section>
 
           <section>
-            <div className="mb-2 flex items-baseline justify-between">
-              <h2 className="font-cartel text-2xl font-bold">Fallas sin resolver</h2>
+            <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-xl font-bold text-sica-navy">Fallas sin resolver</h2>
               {d.paraConformidad > 0 && (
-                <span className="text-sm text-asfalto-500">{d.paraConformidad} resuelta(s) esperando conformidad del operario</span>
+                <span className="text-sm text-tinta-2">{d.paraConformidad} resuelta(s) esperando conformidad del operario</span>
               )}
             </div>
             {d.fallasAbiertas.length === 0 ? (
-              <p className="rounded-lg bg-white p-4 text-asfalto-500">No hay fallas abiertas.</p>
+              <p className="flex items-center gap-2 rounded-lg border border-linea bg-superficie p-4 text-tinta-2">
+                <Icono nombre="okCirculo" className="h-5 w-5 text-ok" /> No hay fallas abiertas.
+              </p>
             ) : (
-              <table className="tabla w-full rounded-lg bg-white">
-                <thead>
-                  <tr>
-                    <th>Equipo</th>
-                    <th>Ítem</th>
-                    <th>Recepción</th>
-                    <th>Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {d.fallasAbiertas.map((f) => (
-                    <tr key={f.id} className="hover:bg-hormigon-claro">
-                      <td>{f.equipo}</td>
-                      <td>
-                        <Link href={`/panel/fallas/${f.id}`} className="font-semibold underline">
-                          {f.item}
-                        </Link>
-                        {f.critica && <Critico />}
-                      </td>
-                      <td>{fechaHora(f.fechaRecepcion)}</td>
-                      <td>
-                        <ChipFalla estado={f.estado} />
-                      </td>
+              <TablaContenedor>
+                <table className="tabla">
+                  <thead>
+                    <tr>
+                      <th>Equipo</th>
+                      <th>Ítem</th>
+                      <th>Recepción</th>
+                      <th>Estado</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {d.fallasAbiertas.map((f) => (
+                      <tr key={f.id}>
+                        <td className="whitespace-nowrap">{f.equipo}</td>
+                        <td>
+                          <span className="flex flex-wrap items-center gap-2">
+                            <Link href={`/panel/fallas/${f.id}`} className="font-semibold text-sica-navy underline">
+                              {f.item}
+                            </Link>
+                            {f.critica && <BadgeCritico />}
+                          </span>
+                        </td>
+                        <td className="whitespace-nowrap tabular-nums">{fechaHora(f.fechaRecepcion)}</td>
+                        <td>
+                          <BadgeFalla estado={f.estado} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </TablaContenedor>
             )}
           </section>
         </div>
 
-        <aside aria-label="Controles recibidos">
-          <h2 className="mb-2 font-cartel text-2xl font-bold">Controles recibidos</h2>
-          <ol className="divide-y divide-hormigon rounded-lg bg-white">
+        <aside aria-label="Controles recibidos" className="min-w-0">
+          <h2 className="mb-2 flex items-center gap-2 text-xl font-bold text-sica-navy">
+            Controles recibidos
+          </h2>
+          <ol className="divide-y divide-linea overflow-hidden rounded-lg border border-linea bg-superficie shadow-tarjeta">
             {d.feed.map((c) => {
-              const r = RESULTADO[c.resultado];
+              const r = RESULTADO[c.resultado as keyof typeof RESULTADO];
+              const est = r ? ESTILO_EQUIPO[r.estado] : null;
               return (
-                <li key={c.id} className={`px-4 py-3 ${nuevos.has(c.id) ? "bg-amarillo-claro" : ""}`}>
-                  <p className="flex justify-between gap-2">
-                    <span className="font-semibold">{c.equipo}</span>
-                    <span className="text-sm text-asfalto-500">{fechaHora(c.firmadoEn)}</span>
-                  </p>
-                  <p className="text-sm">
-                    {c.operario} · <span className={`font-semibold ${r?.cls}`}>{r?.txt}</span>
-                  </p>
+                <li key={c.id} className={`flex gap-3 px-4 py-3 ${nuevos.has(c.id) ? "bg-sica-cyan-50" : ""}`}>
+                  {est && <Icono nombre={est.icono} className={`mt-0.5 h-5 w-5 ${est.color}`} />}
+                  <div className="min-w-0 flex-1">
+                    <p className="flex justify-between gap-2">
+                      <span className="font-semibold">{c.equipo}</span>
+                      <span className="whitespace-nowrap text-sm tabular-nums text-tinta-2">{fechaHora(c.firmadoEn)}</span>
+                    </p>
+                    <p className="text-sm">
+                      {c.operario} · <span className="font-semibold">{r?.txt}</span>
+                    </p>
+                  </div>
                 </li>
               );
             })}
-            {d.feed.length === 0 && <li className="px-4 py-3 text-asfalto-500">Todavía no se registraron controles.</li>}
+            {d.feed.length === 0 && <li className="px-4 py-4 text-tinta-2">Todavía no se registraron controles.</li>}
           </ol>
         </aside>
       </div>
     </div>
+  );
+}
+
+function Indicador({ valor, etiqueta, href, alerta }: { valor: number; etiqueta: string; href?: string; alerta?: boolean }) {
+  // dt antes que dd en el DOM (semántica de <dl>); flex-col-reverse muestra el número arriba.
+  const cuerpo = (
+    <div className="flex flex-col-reverse">
+      <dt className="mt-1 text-sm text-tinta-2">{etiqueta}</dt>
+      <dd className={`text-3xl font-bold leading-none tabular-nums ${alerta ? "text-fs" : "text-sica-navy"}`}>{valor}</dd>
+    </div>
+  );
+  const cls = "block rounded-lg border border-linea bg-superficie px-4 py-3 shadow-tarjeta";
+  return href ? (
+    <Link href={href} className={`${cls} hover:border-sica-navy`}>
+      {cuerpo}
+    </Link>
+  ) : (
+    <div className={cls}>{cuerpo}</div>
   );
 }

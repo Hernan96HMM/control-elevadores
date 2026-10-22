@@ -1,8 +1,8 @@
 // Service worker mínimo: SOLO cachea assets estáticos (JS/CSS/fuentes/íconos).
 // Nunca cachea HTML ni /api: los datos del control siempre van a la red
 // (la cola de reintento offline la maneja la página, no el SW).
-const CACHE = "assets-v1";
-const ESTATICOS = /^\/(_next\/static\/|icono|manifest\.webmanifest)/;
+const CACHE = "assets-v2";
+const ESTATICOS = /^\/(_next\/static\/|brand\/|icono|favicon|apple-touch-icon|manifest\.webmanifest)/;
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (e) => {
